@@ -105,4 +105,24 @@ public static class StringExtension{
         return string.Join(Environment.NewLine, str.Split(Environment.NewLine)
             .Select(line => line.PadRight(length, paddingChar)));
     }
+
+    public static string CombineLines(this string strLinesLeft, string strLinesRight, string separator = " ")
+    {
+        string[] linesLeft = strLinesLeft.Split(Environment.NewLine);
+        int maxLengthLeft = linesLeft.Max(line => line.Length);
+        string[] linesRight = strLinesRight.Split(Environment.NewLine);
+        int maxLengthRight = linesRight.Max(line => line.Length);
+
+        int maxLength = Math.Max(linesLeft.Length, linesRight.Length);
+        var combinedLines = new List<string>();
+
+        for (int i = 0; i < maxLength; i++)
+        {
+            string left = linesLeft[i].SetLength(maxLengthLeft);
+            string right = linesRight[i].SetLength(maxLengthRight);
+            combinedLines.Add($"{left}{separator}{right}");
+        }
+
+        return string.Join(Environment.NewLine, combinedLines);
+    }
 }
