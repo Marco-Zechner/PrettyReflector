@@ -118,9 +118,9 @@ public static class StringExtension{
 
         for (int i = 0; i < maxLength; i++)
         {
-            string left = linesLeft[i].SetLength(maxLengthLeft);
-            string right = linesRight[i].SetLength(maxLengthRight);
-            combinedLines.Add($"{left}{separator}{right}");
+            string left = linesLeft.Length > i ? linesLeft[i] : string.Empty;
+            string right = linesRight.Length > i ? linesRight[i] : string.Empty;
+            combinedLines.Add($"{left.SetLength(maxLengthRight)}{separator}{right.SetLength(maxLengthRight)}");
         }
 
         return string.Join(Environment.NewLine, combinedLines);
