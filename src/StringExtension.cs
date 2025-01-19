@@ -84,8 +84,25 @@ public static class StringExtension{
             return str;
         }
 
+        str = str.Replace("\r\n", "\n").Replace('\r', '\n');
         string indent = new(indentChar, count);
-        return string.Join(Environment.NewLine, str.Split(Environment.NewLine).Select(line => indent + line));
+        return string.Join(Environment.NewLine, str.Split('\n').Select(line => indent + line));
+    }
+
+    /// <summary>
+    /// Indents each line of a string by a given amount of characters.
+    /// </summary>
+    /// <param name="str">String to indent</param>
+    /// <param name="count">Number of characters to indent</param>
+    /// <param name="indentChar">Character that is used to indent each line</param>
+    /// <returns></returns>
+    public static string Indent(this string str, string indentString = " ") {
+        if (string.IsNullOrEmpty(indentString)) {
+            return str;
+        }
+
+        str = str.Replace("\r\n", "\n").Replace('\r', '\n');
+        return string.Join(Environment.NewLine, str.Split('\n').Select(line => indentString + line));
     }
 
     /// <summary>
@@ -102,15 +119,18 @@ public static class StringExtension{
         if (string.IsNullOrEmpty(str))
             return string.Empty;
 
-        return string.Join(Environment.NewLine, str.Split(Environment.NewLine)
+        str = str.Replace("\r\n", "\n").Replace('\r', '\n');
+        return string.Join(Environment.NewLine, str.Split('\n')
             .Select(line => line.PadRight(length, paddingChar)));
     }
 
     public static string CombineLines(this string strLinesLeft, string strLinesRight, string separator = " ")
     {
-        string[] linesLeft = strLinesLeft.Split(Environment.NewLine);
+        strLinesLeft = strLinesLeft.Replace("\r\n", "\n").Replace('\r', '\n');
+        string[] linesLeft = strLinesLeft.Split('\n');
         int maxLengthLeft = linesLeft.Max(line => line.Length);
-        string[] linesRight = strLinesRight.Split(Environment.NewLine);
+        strLinesRight = strLinesRight.Replace("\r\n", "\n").Replace('\r', '\n');
+        string[] linesRight = strLinesRight.Split('\n');
         int maxLengthRight = linesRight.Max(line => line.Length);
 
         int maxLength = Math.Max(linesLeft.Length, linesRight.Length);
@@ -120,7 +140,7 @@ public static class StringExtension{
         {
             string left = linesLeft.Length > i ? linesLeft[i] : string.Empty;
             string right = linesRight.Length > i ? linesRight[i] : string.Empty;
-            combinedLines.Add($"{left.SetLength(maxLengthRight)}{separator}{right.SetLength(maxLengthRight)}");
+            combinedLines.Add($"{left.SetLength(maxLengthLeft)}{separator}{right.SetLength(maxLengthRight)}");
         }
 
         return string.Join(Environment.NewLine, combinedLines);

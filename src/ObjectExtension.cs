@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using MarcoZechner.ColorString;
 
 namespace MarcoZechner.PrettyReflector; 
 
@@ -34,6 +35,35 @@ public static class ObjectExtension{
         return PrettyCustomTypes(obj, objType);
     }
 
+    public static ColoredString ColoredPrettyValue(this object? obj)
+    {
+        if (obj == null)
+            return Color.Blue.For("null");
+        var objType = obj.GetType();
+
+        switch (obj)
+        {
+            case string str:
+                return Color.DarkYellow.For($"\"{str}\"");
+            case char ch:
+                return Color.DarkYellow.For($"'{ch}'");
+            case IDictionary dictionary:
+                return ColoredPrettyDictionaryData(dictionary);
+            case ITuple tuple:
+                return ColoredPrettyTupleData(obj, objType);
+            case IEnumerable enumerable:
+                return "[" + ColoredString.Join(", ", enumerable.Cast<object>().Select(ColoredPrettyValue)) + "]";
+        }
+
+        if (objType.IsPrimitive)
+            return Color.Cyan.For(PrettyNumbers(obj, objType));
+
+        if (objType.IsEnum)
+            return objType.ColoredPrettyType() + "." + Color.Cyan.For(obj.ToString() ?? "null");
+
+        return ColoredPrettyCustomTypes(obj, objType);
+    }
+
     private static string PrettyCustomTypes(object obj, Type objType)
     {
         var properties = objType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -47,6 +77,21 @@ public static class ObjectExtension{
 
         var members = string.Join(", ", properties.Concat(fields));
         return $"{objType.PrettyType()} {{ {members} }}";
+    }
+
+    private static ColoredString ColoredPrettyCustomTypes(object obj, Type objType)
+    {
+        IEnumerable<ColoredString> properties = objType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(p => p.CanRead)
+                    .Select(p =>
+                        p.PropertyType.ColoredPrettyType() + " " + Color.Magenta.For(p.Name) + " = " + ColoredPrettyValue(p.GetValue(obj)));
+
+        IEnumerable<ColoredString> fields = objType.GetFields(BindingFlags.Public | BindingFlags.Instance)
+            .Select(f =>
+                f.FieldType.ColoredPrettyType() + " " + f.Name + " = " + ColoredPrettyValue(f.GetValue(obj)));
+
+        var members = ColoredString.Join(", ", properties.Concat(fields));
+        return objType.ColoredPrettyType() + " { " + members + " }";
     }
 
     private static string PrettyNumbers(object obj, Type objType)
@@ -75,12 +120,25 @@ public static class ObjectExtension{
         if (fields.Length == 8 && fields[7].Name == "Rest" && fieldValues[7]?.GetType().FullName?.StartsWith("System.ValueTuple") == true)
         {
             // Unnest the "Rest" field
-            fieldValues = fields.Take(7).Select(f => f.GetValue(obj))
-                .Concat(FlattenTuple(fieldValues[7]))
-                .ToList();
+            fieldValues = [.. fields.Take(7).Select(f => f.GetValue(obj)), .. FlattenTuple(fieldValues[7])];
         }
 
         return $"({string.Join(", ", fieldValues.Select(PrettyValue))})";
+    }
+    
+    private static ColoredString ColoredPrettyTupleData(object obj, Type objType)
+    {
+        var fields = objType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+
+        // Check for long tuple nesting
+        var fieldValues = fields.Select(f => f.GetValue(obj)).ToList();
+        if (fields.Length == 8 && fields[7].Name == "Rest" && fieldValues[7]?.GetType().FullName?.StartsWith("System.ValueTuple") == true)
+        {
+            // Unnest the "Rest" field
+            fieldValues = [.. fields.Take(7).Select(f => f.GetValue(obj)), .. FlattenTuple(fieldValues[7])];
+        }
+
+        return "(" + ColoredString.Join(", ", fieldValues.Select(ColoredPrettyValue)) + ")";
     }
 
     private static string PrettyDictionaryData(IDictionary dictionary)
@@ -93,6 +151,18 @@ public static class ObjectExtension{
                                 });
 
         return $"[{string.Join(", ", entries)}]";
+    }
+
+    private static string ColoredPrettyDictionaryData(IDictionary dictionary)
+    {
+        var entries = (IEnumerable<ColoredString>) dictionary.Cast<object>()
+                                .Select(entry =>
+                                {
+                                    var kvp = (dynamic)entry; // Dynamically access Key and Value
+                                    return ColoredPrettyValue(kvp.Key) + ": " + ColoredPrettyValue(kvp.Value);
+                                });
+
+        return "[" + ColoredString.Join(", ", entries) + "]";
     }
 
     private static IEnumerable<object?> FlattenTuple(object? tuple)

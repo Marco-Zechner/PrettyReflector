@@ -9,6 +9,10 @@ obj/
 *.user
 *.vs/
 
+# Libraries and dependencies
+*.dll
+*.exe
+
 # IDEs and editors
 .editorconfig
 .vscode/
